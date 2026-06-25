@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>xo Term</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="xterm.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      overflow: hidden;
+    }
+    #app {
+      width: 100vw; height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* 登录框 */
+    .login-box {
+      background: #16213e; padding: 48px 40px;
+      border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      width: 360px; max-width: 90vw;
+    }
+    .login-box h1 {
+      text-align: center; margin-bottom: 8px;
+      font-size: 24px; font-weight: 600; color: #4fc3f7;
+    }
+    .login-box .subtitle {
+      text-align: center; margin-bottom: 32px;
+      font-size: 14px; color: #546e7a;
+    }
+    .login-box label {
+      display: block; margin-bottom: 6px; font-size: 15px; color: #90a4ae;
+    }
+    .login-box input {
+      width: 100%; padding: 10px 12px; margin-bottom: 20px;
+      border: 1px solid #2a3a5c; border-radius: 4px;
+      background: #0f3460; color: #e0e0e0; font-size: 15px;
+      outline: none; transition: border-color 0.2s;
+    }
+    .login-box input:focus { border-color: #4fc3f7; }
+    .login-box button {
+      width: 100%; padding: 10px 0; margin-top: 8px;
+      border: none; border-radius: 4px;
+      background: #4fc3f7; color: #0a0a1a;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .login-box button:hover { background: #29b6f6; }
+    .login-box button:disabled { background: #546e7a; cursor: not-allowed; }
+    .login-box .error { color: #ef5350; font-size: 15px; text-align: center; margin-bottom: 12px; }
+    /* 登录框浅色主题 */
+    body.light { background: #f0f2f5; }
+    body.light .login-box {
+      background: #fff;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    body.light .login-box h1 { color: #1976d2; }
+    body.light .login-box .subtitle { color: #999; }
+    body.light .login-box label { color: #666; }
+    body.light .login-box input {
+      background: #f5f5f5; border-color: #ddd; color: #333;
+    }
+    body.light .login-box input:focus { border-color: #1976d2; }
+    body.light .login-box button {
+      background: #1976d2; color: #fff;
+    }
+    body.light .login-box button:hover { background: #1565c0; }
+    body.light .login-box button:disabled { background: #bbb; }
+    body.light .login-box .error { color: #d32f2f; }
+
+    /* ===== 应用外壳：左右两栏 ===== */
+    .app-shell {
+      display: flex; height: 100vh; width: 100vw;
+    }
+
+    /* ===== 左侧导航栏 ===== */
+    .sidebar {
+      width: 180px; min-width: 180px;
+      background: #0d1117;
+      display: flex; flex-direction: column;
+      border-right: 1px solid rgba(79,195,247,0.1);
+      transition: width 0.2s ease, min-width 0.2s ease;
+      overflow: hidden; user-select: none;
+    }
+    .sidebar.collapsed {
+      width: 50px; min-width: 50px;
+    }
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(79,195,247,0.08);
+      height: 45px; flex-shrink: 0;
+    }
+    .sidebar-logo img { width: 24px; height: 24px; flex-shrink: 0; }
+    .sidebar-logo span {
+      font-size: 15px; font-weight: 600; color: #4fc3f7;
+      white-space: nowrap; overflow: hidden;
+    }
+    .sidebar.collapsed .sidebar-logo { justify-content: center; padding: 10px 0; }
+    .sidebar.collapsed .sidebar-logo span { display: none; }
+
+    .sidebar-nav {
+      flex: 1; padding: 8px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 6px;
+      cursor: pointer; color: #8b949e;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap; overflow: hidden;
+      font-size: 15px;
+    }
+    .nav-item:hover { background: rgba(79,195,247,0.08); color: #c9d1d9; }
+    .nav-item.active { background: rgba(79,195,247,0.12); color: #4fc3f7; }
+    .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .nav-item span { overflow: hidden; }
+    .sidebar.collapsed .nav-item { justify-content: center; padding: 10px 0; }
+    .sidebar.collapsed .nav-item span { display: none; }
+
+    .sidebar-footer {
+      padding: 8px; border-top: 1px solid rgba(79,195,247,0.08);
+      display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;
+    }
+    .sidebar-status {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 6px; font-size: 14px; color: #8b949e;
+      white-space: nowrap; overflow: hidden;
+    }
+    .sidebar-status .dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+      background: #4caf50;
+    }
+    .sidebar-status .dot.disconnected { background: #ef5350; }
+    .sidebar.collapsed .sidebar-status { justify-content: center; padding: 4px 0; }
+    .sidebar.collapsed .sidebar-status span { display: none; }
+
+    .sf-btns {
+      display: flex; justify-content: space-between; gap: 4px;
+    }
+    .sf-btn {
+      width: 32px; height: 32px; padding: 0;
+      background: transparent;
+      border: 1px solid rgba(79,195,247,0.1); border-radius: 6px;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .sf-btn:hover { background: rgba(79,195,247,0.1); border-color: rgba(79,195,247,0.2); }
+    .sf-btn img { width: 16px; height: 16px; filter: brightness(0) saturate(100%) invert(65%) sepia(9%) saturate(344%) hue-rotate(157deg) brightness(92%) contrast(84%); }
+    .sf-btn:hover img { filter: brightness(0) saturate(100%) invert(95%); }
+    .sidebar.collapsed .sf-btn-about { display: none; }
+    .sidebar.collapsed .sf-btns { justify-content: center; }
+
+    /* 关于弹窗（屏幕居中 16:9） */
+    .about-overlay {
+      position: fixed; inset: 0; z-index: 150;
+      background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .about-modal {
+      width: 720px; max-width: 90vw;
+      aspect-ratio: 16 / 9;
+      background: #0d1117; border: 1px solid rgba(79,195,247,0.15);
+      border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      display: flex; overflow: hidden;
+      position: relative;
+    }
+    .about-close {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      width: 26px; height: 26px; padding: 0;
+      background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 4px; color: #8b949e; font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s, background 0.15s;
+    }
+    .about-close:hover { color: #fff; background: rgba(239,83,80,0.5); }
+    .about-left {
+      flex: 3; padding: 32px 28px;
+      display: flex; flex-direction: column; justify-content: center;
+      min-width: 0;
+    }
+    .about-left h2 {
+      font-size: 20px; font-weight: 600; color: #4fc3f7; margin: 0 0 4px;
+    }
+    .about-left .about-role {
+      font-size: 14px; color: #546e7a; margin: 0 0 16px;
+    }
+    .about-left .about-desc {
+      font-size: 14px; color: #8b949e; line-height: 1.7; margin: 0 0 14px;
+    }
+    .about-tags {
+      display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px;
+    }
+    .about-tag {
+      font-size: 14px; padding: 2px 10px;
+      background: rgba(79,195,247,0.08); color: #4fc3f7;
+      border-radius: 3px;
+    }
+    .about-left .about-footer-text {
+      font-size: 14px; color: #546e7a; margin: 0;
+    }
+    .about-right {
+      flex: 2; padding: 32px 28px 32px 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      border-left: 1px solid rgba(79,195,247,0.08);
+    }
+    .about-right img {
+      width: 120px; height: auto; border-radius: 6px;
+      border: 1px solid rgba(79,195,247,0.1);
+    }
+    .about-qr-label {
+      font-size: 14px; color: #8b949e; margin: 8px 0 10px;
+    }
+    .about-email {
+      font-size: 14px; color: #546e7a; margin: 0 0 8px;
+      font-family: 'Cascadia Mono', monospace;
+    }
+    .about-motto {
+      font-size: 12px; color: #546e7a; opacity: 0.7; margin: 0;
+      text-align: center;
+    }
+
+    /* ===== 右侧内容区 ===== */
+    .content-area {
+      flex: 1; overflow: hidden; position: relative;
+      background: #0a0e1a;
+    }
+
+    /* ===== 终端容器 ===== */
+    #terminal-container {
+      width: 100%; height: 100%; padding: 4px;
+    }
+
+    /* ===== 文件视图（内嵌） ===== */
+    .files-view {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      background: #0a0e1a;
+    }
+    .fv-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(79,195,247,0.12);
+      flex-shrink: 0;
+    }
+    .fv-path {
+      flex: 1; padding: 0 10px; font-size: 14px; height: 28px; line-height: 28px;
+      background: rgba(79,195,247,0.04);
+      border: 1px solid rgba(79,195,247,0.1); border-radius: 3px;
+      color: #e0e0e0; outline: none;
+      font-family: 'Cascadia Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .fv-path:focus {
+      border-color: #4fc3f7;
+      box-shadow: 0 0 8px rgba(79,195,247,0.15);
+    }
+    .fv-btn {
+      width: 28px; height: 28px; padding: 0;
+      background: rgba(79,195,247,0.06);
+      border: 1px solid rgba(79,195,247,0.15); border-radius: 3px;
+      color: #90a4ae; font-size: 15px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1; flex-shrink: 0;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .fv-btn:hover {
+      background: rgba(79,195,247,0.15); color: #e0e0e0;
+      box-shadow: 0 0 6px rgba(79,195,247,0.1);
+    }
+    .fv-upload-btn { color: #4fc3f7; font-size: 18px; font-weight: bold; }
+    .fv-upload-btn:hover { color: #81d4fa; }
+
+    .fv-list { flex: 1; overflow-y: auto; padding: 2px 0; }
+    .fv-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 12px; font-size: 15px; cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .fv-item:hover {
+      border-left-color: #4fc3f7;
+      background: rgba(79,195,247,0.05);
+    }
+    .fv-dir { color: #4fc3f7; }
+    .fv-item-left {
+      display: flex; align-items: center; gap: 8px;
+      width: 70%; min-width: 0;
+    }
+    .fv-item-right {
+      display: flex; align-items: center; gap: 8px;
+      width: 30%; flex-shrink: 0;
+      font-family: 'Cascadia Mono', monospace;
+    }
+    .fv-icon {
+      width: 20px; height: 20px; border-radius: 3px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: bold; font-family: monospace;
+    }
+    .fv-dir .fv-icon { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+    .fv-item:not(.fv-dir) .fv-icon { background: rgba(144,164,174,0.08); color: #78909c; }
+    .fv-name {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-family: 'Cascadia Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+      min-width: 0;
+    }
+    .fv-size {
+      font-size: 13px; color: #546e7a; flex-shrink: 0;
+    }
+    .fv-actions { display: flex; gap: 8px; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; margin-left: auto; }
+    .fv-item:hover .fv-actions { opacity: 1; }
+    .fv-action-btn {
+      width: 26px; height: 26px; padding: 8px;
+      background: rgba(79,195,247,0.06);
+      border: 1px solid rgba(79,195,247,0.12); border-radius: 3px;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .fv-action-btn img { width: 12px; height: 12px; filter: brightness(0) saturate(100%) invert(65%) sepia(9%) saturate(344%) hue-rotate(157deg) brightness(92%) contrast(84%); }
+    .fv-action-btn:hover { background: rgba(79,195,247,0.18); border-color: rgba(79,195,247,0.25); }
+    .fv-action-btn:hover img { filter: brightness(0) saturate(100%) invert(95%); }
+    .fv-action-btn.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+    .fv-action-btn.disabled:hover { background: rgba(79,195,247,0.06); }
+    .fv-action-btn.disabled:hover img { filter: brightness(0) saturate(100%) invert(65%) sepia(9%) saturate(344%) hue-rotate(157deg) brightness(92%) contrast(84%); }
+    .fv-empty, .fv-loading { color: #546e7a; cursor: default; justify-content: center; border-left-color: transparent; }
+    .fv-empty:hover, .fv-loading:hover { background: transparent; border-left-color: transparent; }
+
+    /* 上传进度 */
+    .fv-progress { padding: 6px 12px; border-bottom: 1px solid rgba(79,195,247,0.1); flex-shrink: 0; }
+    .fv-progress-bar {
+      height: 3px; background: rgba(79,195,247,0.08); border-radius: 2px;
+      margin-bottom: 3px; overflow: hidden;
+    }
+    .fv-progress-fill {
+      height: 100%; background: linear-gradient(90deg, #4fc3f7, #26c6da);
+      border-radius: 2px; transition: width 0.15s;
+      animation: fv-shimmer 1.5s infinite;
+    }
+    @keyframes fv-shimmer {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.75; }
+    }
+    .fv-progress-text { font-size: 13px; color: #4fc3f7; font-family: 'Cascadia Mono', monospace; }
+
+    /* ===== 文件编辑器 Modal ===== */
+    .fe-modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fe-modal-wrap {
+      width: 80vw; height: 80vh;
+      background: #0d1117; border: 1px solid rgba(79,195,247,0.15);
+      border-radius: 6px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .fei-header {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 16px; flex-shrink: 0;
+      border-bottom: 1px solid rgba(79,195,247,0.12);
+    }
+    .fei-name {
+      flex: 1; font-size: 15px; color: #4fc3f7;
+      font-family: 'Cascadia Mono', monospace;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .fei-body {
+      flex: 1; display: flex; overflow: hidden; position: relative;
+    }
+    .fei-gutter {
+      padding: 12px 0; overflow: hidden; text-align: right; user-select: none;
+      font-family: 'Cascadia Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 15px; line-height: 1.5; color: #546e7a;
+      background: rgba(0,0,0,0.15);
+      border-right: 1px solid rgba(79,195,247,0.08);
+    }
+    .fei-gutter span { display: block; padding: 0 14px 0 10px; min-width: 3em; }
+    .fei-textarea {
+      flex: 1; padding: 12px; font-size: 15px; line-height: 1.5;
+      font-family: 'Cascadia Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+      background: #0a0e1a; color: #e0e0e0;
+      border: none; outline: none; resize: none;
+      tab-size: 4; white-space: pre; overflow: auto;
+    }
+    .fei-textarea:focus { background: #0c1222; }
+    .fei-float-btn {
+      position: absolute; right: 18px;
+      width: 28px; height: 28px; padding: 5px;
+      background: rgba(79,195,247,0.12);
+      border: 1px solid rgba(79,195,247,0.15); border-radius: 3px;
+      cursor: pointer; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .fei-float-btn:hover { background: rgba(79,195,247,0.25); }
+    .fei-float-btn img { filter: brightness(0) saturate(100%) invert(65%) sepia(9%) saturate(344%) hue-rotate(157deg) brightness(92%) contrast(84%); }
+    .fei-float-btn:hover img { filter: brightness(0) saturate(100%) invert(95%); }
+    .fei-float-top { top: 6px; }
+    .fei-float-bottom { bottom: 16px; }
+
+    /* ===== Docker 管理 ===== */
+    .docker-view {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      background: #0a0e1a;
+    }
+    .dk-tabs {
+      display: flex; align-items: center; gap: 2px;
+      padding: 0 12px; height: 45px;
+      border-bottom: 1px solid rgba(79,195,247,0.12);
+      flex-shrink: 0;
+    }
+    .dk-tab {
+      padding: 7px 18px; font-size: 15px; cursor: pointer;
+      color: #8b949e; border-radius: 4px 4px 0 0;
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .dk-tab:hover { background: rgba(79,195,247,0.06); color: #c9d1d9; }
+    .dk-tab.active { background: rgba(79,195,247,0.1); color: #4fc3f7; }
+
+    .dk-toolbar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 12px; flex-shrink: 0;
+      border-bottom: 1px solid rgba(79,195,247,0.06);
+    }
+    .dk-search {
+      flex: 1; padding: 0 10px; height: 28px; line-height: 28px;
+      background: rgba(79,195,247,0.04);
+      border: 1px solid rgba(79,195,247,0.1); border-radius: 3px;
+      color: #e0e0e0; outline: none; font-size: 14px;
+      font-family: 'Cascadia Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .dk-search:focus {
+      border-color: #4fc3f7;
+      box-shadow: 0 0 8px rgba(79,195,247,0.15);
+    }
+    .dk-search::placeholder { color: #546e7a; }
+    .dk-btn {
+      height: 28px; padding: 0 12px;
+      background: rgba(79,195,247,0.06);
+      border: 1px solid rgba(79,195,247,0.15); border-radius: 3px;
+      color: #90a4ae; font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      white-space: nowrap; flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+    .dk-btn:hover { background: rgba(79,195,247,0.15); color: #e0e0e0; }
+    .dk-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .dk-btn:disabled:hover { background: rgba(79,195,247,0.06); color: #90a4ae; }
+    .dk-btn-danger:not(:disabled) { color: #ef5350; border-color: rgba(239,83,80,0.3); background: rgba(239,83,80,0.08); }
+    .dk-btn-danger:not(:disabled):hover { background: rgba(239,83,80,0.2); color: #ff7043; }
+    .dk-loading-text { font-size: 14px; color: #4fc3f7; flex-shrink: 0; }
+
+    .dk-list { flex: 1; overflow-y: auto; padding: 0; }
+
+    .dk-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 15px; table-layout: fixed;
+    }
+    .dk-table thead {
+      position: sticky; top: 0; z-index: 2;
+      opacity: 0.75;
+    }
+    .dk-table th {
+      padding: 8px 12px; text-align: left; font-weight: 500;
+      color: #78909c; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
+      background: #0d1117;
+      border-bottom: 1px solid rgba(79,195,247,0.1);
+      white-space: nowrap; user-select: none;
+    }
+    .dk-table td {
+      padding: 7px 12px;
+      border-bottom: 1px solid rgba(79,195,247,0.04);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dk-row { transition: background 0.15s; }
+    .dk-row:hover { background: rgba(79,195,247,0.04); }
+
+    .dk-table th.dk-th-check { width: 50px; text-align: center; }
+    .dk-th-check .dk-check { margin: 0; vertical-align: middle; }
+    .dk-td-check { text-align: center; overflow: visible; }
+    .dk-td-check .dk-check { margin: 0; vertical-align: middle; }
+    .dk-th-status { width: 48px; text-align: center; }
+    .dk-td-status { text-align: center; vertical-align: middle; }
+    .dk-th-name { width: 220px; }
+    .dk-th-image { width: 320px; }
+    .dk-th-ports { width: auto; }
+    .dk-th-created { width: 220px; }
+    .dk-th-id { width: 140px; }
+    .dk-th-size { width: 100px; }
+    .dk-th-actions { width: 200px; }
+
+    .dk-status-msg { color: #546e7a; padding: 20px; text-align: center; font-size: 15px; }
+    .dk-error { color: #ef5350; }
+
+    .dk-status-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: #546e7a; vertical-align: middle;
+    }
+    .dk-status-dot.running { background: #4caf50; box-shadow: 0 0 6px rgba(76,175,80,0.5); }
+    .dk-status-dot.exited { background: #ef5350; }
+    .dk-status-dot.paused { background: #ff9800; }
+
+    .dk-name {
+      position: relative;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-family: 'Cascadia Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      color: #e0e0e0;
+    }
+    .dk-tag {
+      font-size: 13px; color: #4fc3f7; background: rgba(79,195,247,0.08);
+      padding: 1px 8px; border-radius: 3px;
+      font-family: 'Cascadia Mono', monospace;
+      display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dk-ports {
+      font-size: 13px; color: #78909c;
+      font-family: 'Cascadia Mono', monospace;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dk-created {
+      font-size: 13px; color: #78909c;
+      font-family: 'Cascadia Mono', monospace;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dk-meta {
+      font-size: 13px; color: #546e7a;
+      font-family: 'Cascadia Mono', monospace;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dk-actions { display: flex; gap: 8px; }
+    .dk-copy-btn {
+      display: none; position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+      width: 18px; height: 18px; padding: 2px;
+      background: rgba(13,17,23,0.9); border: 1px solid rgba(79,195,247,0.15);
+      border-radius: 3px; cursor: pointer; flex-shrink: 0;
+    }
+    .dk-copy-btn img { width: 10px; height: 10px; filter: brightness(0) saturate(100%) invert(65%) sepia(9%) saturate(344%) hue-rotate(157deg) brightness(92%) contrast(84%); }
+    .dk-copy-btn:hover { background: rgba(79,195,247,0.2); }
+    .dk-copy-btn:hover img { filter: brightness(0) saturate(100%) invert(95%); }
+    .dk-row:hover .dk-copy-btn { display: inline-flex; align-items: center; justify-content: center; }
+    .dk-icon-btn {
+      width: 28px; height: 28px; padding: 5px;
+      background: rgba(79,195,247,0.06);
+      border: 1px solid rgba(79,195,247,0.12); border-radius: 3px;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .dk-icon-btn img { width: 14px; height: 14px; filter: brightness(0) saturate(100%) invert(65%) sepia(9%) saturate(344%) hue-rotate(157deg) brightness(92%) contrast(84%); }
+    .dk-icon-btn:hover { background: rgba(79,195,247,0.18); border-color: rgba(79,195,247,0.25); }
+    .dk-icon-btn:hover img { filter: brightness(0) saturate(100%) invert(95%); }
+    .dk-icon-start:hover { background: rgba(76,175,80,0.12); border-color: rgba(76,175,80,0.35); }
+    .dk-icon-start:hover img { filter: brightness(0) saturate(100%) invert(56%) sepia(74%) saturate(437%) hue-rotate(73deg) brightness(94%) contrast(86%); }
+    .dk-icon-stop:hover { background: rgba(239,83,80,0.12); border-color: rgba(239,83,80,0.35); }
+    .dk-icon-stop:hover img { filter: brightness(0) saturate(100%) invert(36%) sepia(85%) saturate(2144%) hue-rotate(337deg) brightness(97%) contrast(88%); }
+    .dk-icon-restart:hover { background: rgba(255,152,0,0.12); border-color: rgba(255,152,0,0.35); }
+    .dk-icon-restart:hover img { filter: brightness(0) saturate(100%) invert(60%) sepia(83%) saturate(1148%) hue-rotate(1deg) brightness(103%) contrast(101%); }
+    .dk-icon-del:hover { background: rgba(239,83,80,0.12); border-color: rgba(239,83,80,0.35); }
+    .dk-icon-del:hover img { filter: brightness(0) saturate(100%) invert(36%) sepia(85%) saturate(2144%) hue-rotate(337deg) brightness(97%) contrast(88%); }
+
+    .dk-check {
+      accent-color: #4fc3f7; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;
+    }
+    .dk-check:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* 弹窗 */
+    .dk-modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dk-modal-wrap {
+      width: 80vw; height: 80vh;
+      background: #0d1117; border: 1px solid rgba(79,195,247,0.15);
+      border-radius: 6px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .dk-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; font-size: 15px; color: #4fc3f7;
+      border-bottom: 1px solid rgba(79,195,247,0.12);
+      flex-shrink: 0;
+    }
+    .dk-modal-body {
+      flex: 1; overflow: auto; padding: 14px 16px; margin: 0;
+      font-family: 'Cascadia Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 14px; line-height: 1.5; color: #c9d1d9;
+      white-space: pre-wrap; word-break: break-all;
+    }
+
+    /* ===== Toast 通知（右下角弹出） ===== */
+    .toast-container {
+      position: fixed; bottom: 20px; right: 20px; z-index: 200;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+      pointer-events: none;
+    }
+    .toast-item {
+      pointer-events: auto;
+      padding: 6px 16px; border-radius: 4px;
+      font-size: 14px; line-height: 18px;
+      max-width: 420px; word-break: break-all;
+      animation: toast-in 0.25s ease-out;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    }
+    .toast-error { background: #c62828; color: #fff; }
+    .toast-success { background: #2e7d32; color: #fff; }
+    .toast-info { background: #1565c0; color: #fff; }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ===== 通用确认弹窗 ===== */
+    .cm-overlay {
+      position: fixed; inset: 0; z-index: 150;
+      background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cm-wrap {
+      width: 400px; max-width: 90vw;
+      background: #0d1117; border: 1px solid rgba(79,195,247,0.15);
+      border-radius: 6px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .cm-header {
+      padding: 14px 20px; font-size: 14px; font-weight: 600; color: #4fc3f7;
+      border-bottom: 1px solid rgba(79,195,247,0.12);
+    }
+    .cm-body {
+      padding: 20px; font-size: 14px; color: #c9d1d9; line-height: 1.6;
+    }
+    .cm-footer {
+      display: flex; justify-content: flex-end; gap: 8px;
+      padding: 12px 20px; border-top: 1px solid rgba(79,195,247,0.08);
+    }
+    .cm-btn {
+      padding: 7px 22px; border-radius: 4px; font-size: 14px; cursor: pointer;
+      border: 1px solid rgba(79,195,247,0.15);
+      background: rgba(79,195,247,0.08); color: #c9d1d9;
+      transition: background 0.15s, color 0.15s;
+    }
+    .cm-btn:hover { background: rgba(79,195,247,0.18); color: #e0e0e0; }
+    .cm-confirm-btn {
+      background: #c62828; border-color: #c62828; color: #fff;
+    }
+    .cm-confirm-btn:hover { background: #e53935; }
+
+    /* ===== 浅色主题适配 ===== */
+    body.light .sidebar {
+      background: #f5f6f8;
+      border-right-color: rgba(25,118,210,0.1);
+    }
+    body.light .sidebar-logo { border-bottom-color: rgba(25,118,210,0.08); }
+    body.light .sidebar-logo span { color: #1976d2; }
+    body.light .nav-item { color: #666; }
+    body.light .nav-item:hover { background: rgba(25,118,210,0.06); color: #333; }
+    body.light .nav-item.active { background: rgba(25,118,210,0.1); color: #1976d2; }
+    body.light .sidebar-footer { border-top-color: rgba(25,118,210,0.08); }
+    body.light .sidebar-status { color: #888; }
+    body.light .sf-btn {
+      border-color: rgba(25,118,210,0.1);
+    }
+    body.light .sf-btn:hover { background: rgba(25,118,210,0.08); }
+    body.light .sf-btn img { filter: brightness(0) saturate(100%) invert(47%) sepia(4%) saturate(18%) hue-rotate(0deg) brightness(92%) contrast(84%); }
+    body.light .sf-btn:hover img { filter: brightness(0) saturate(100%) invert(20%); }
+    body.light .about-modal {
+      background: #fff; border-color: rgba(25,118,210,0.12);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    }
+    body.light .about-overlay { background: rgba(0,0,0,0.3); }
+    body.light .about-left h2 { color: #1976d2; }
+    body.light .about-left .about-role { color: #999; }
+    body.light .about-left .about-desc { color: #555; }
+    body.light .about-tag {
+      background: rgba(25,118,210,0.08); color: #1976d2;
+    }
+    body.light .about-left .about-footer-text { color: #999; }
+    body.light .about-right { border-left-color: rgba(25,118,210,0.08); }
+    body.light .about-right img { border-color: rgba(25,118,210,0.08); }
+    body.light .about-qr-label { color: #888; }
+    body.light .about-email { color: #999; }
+    body.light .about-motto { color: #aaa; }
+    body.light .about-close {
+      background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.08); color: #999;
+    }
+    body.light .about-close:hover { color: #fff; background: rgba(211,47,47,0.5); }
+    body.light .content-area { background: #fafafa; }
+
+    body.light .files-view { background: #fafafa; }
+    body.light .fv-header { border-bottom-color: rgba(25,118,210,0.1); }
+    body.light .fv-path {
+      background: rgba(25,118,210,0.03); border-color: rgba(25,118,210,0.1); color: #333;
+    }
+    body.light .fv-path:focus {
+      border-color: #1976d2; box-shadow: 0 0 6px rgba(25,118,210,0.1);
+    }
+    body.light .fv-btn {
+      background: rgba(25,118,210,0.04); border-color: rgba(25,118,210,0.1); color: #666;
+    }
+    body.light .fv-btn:hover {
+      background: rgba(25,118,210,0.1); color: #333;
+      box-shadow: 0 0 4px rgba(25,118,210,0.08);
+    }
+    body.light .fv-upload-btn { color: #1976d2; }
+    body.light .fv-upload-btn:hover { color: #1565c0; }
+    body.light .fv-item:hover { border-left-color: #1976d2; background: rgba(25,118,210,0.04); }
+    body.light .fv-dir { color: #1565c0; }
+    body.light .fv-dir .fv-icon { background: rgba(25,118,210,0.1); color: #1565c0; }
+    body.light .fv-item:not(.fv-dir) .fv-icon { background: rgba(0,0,0,0.04); color: #888; }
+    body.light .fv-name { color: #1a237e; }
+    body.light .fv-size { color: #999; }
+    body.light .fv-empty, body.light .fv-loading { color: #999; border-left-color: transparent; }
+    body.light .fv-empty:hover, body.light .fv-loading:hover { border-left-color: transparent; }
+    body.light .fv-action-btn {
+      background: rgba(25,118,210,0.05); border-color: rgba(25,118,210,0.08); color: #888;
+    }
+    body.light .fv-action-btn:hover { background: rgba(25,118,210,0.12); color: #333; }
+    body.light .fv-action-btn.disabled { opacity: 0.35; }
+    body.light .fv-action-btn.disabled:hover { background: rgba(25,118,210,0.05); color: #888; }
+    body.light .fv-progress { border-bottom-color: rgba(25,118,210,0.08); }
+    body.light .fv-progress-bar { background: rgba(25,118,210,0.06); }
+    body.light .fv-progress-fill { background: linear-gradient(90deg, #1976d2, #42a5f5); }
+    body.light .fv-progress-text { color: #1976d2; }
+
+    body.light .fe-modal-wrap {
+      background: #fff; border-color: rgba(25,118,210,0.12);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    }
+    body.light .fe-modal-overlay { background: rgba(0,0,0,0.3); }
+    body.light .fei-header { border-bottom-color: rgba(25,118,210,0.1); }
+    body.light .fei-name { color: #1565c0; }
+    body.light .fei-gutter {
+      color: #999; background: rgba(0,0,0,0.03);
+      border-right-color: rgba(25,118,210,0.06);
+    }
+    body.light .fei-textarea { background: #fafafa; color: #333; }
+    body.light .fei-textarea:focus { background: #f5f5f5; }
+    body.light .fei-float-btn {
+      background: rgba(25,118,210,0.08); border-color: rgba(25,118,210,0.1);
+    }
+    body.light .fei-float-btn:hover { background: rgba(25,118,210,0.18); }
+    body.light .fei-float-btn img { filter: brightness(0) saturate(100%) invert(47%) sepia(4%) saturate(18%) hue-rotate(0deg) brightness(92%) contrast(84%); }
+    body.light .fei-float-btn:hover img { filter: brightness(0) saturate(100%) invert(20%); }
+
+    body.light .fv-action-btn img { filter: brightness(0) saturate(100%) invert(47%) sepia(4%) saturate(18%) hue-rotate(0deg) brightness(92%) contrast(84%); }
+    body.light .fv-action-btn:hover img { filter: brightness(0) saturate(100%) invert(20%); }
+
+    /* Docker 浅色主题 */
+    body.light .docker-view { background: #fafafa; }
+    body.light .dk-tabs { border-bottom-color: rgba(25,118,210,0.1); }
+    body.light .dk-tab { color: #666; }
+    body.light .dk-tab:hover { background: rgba(25,118,210,0.04); color: #333; }
+    body.light .dk-tab.active { background: rgba(25,118,210,0.08); color: #1976d2; }
+    body.light .dk-toolbar { border-bottom-color: rgba(25,118,210,0.06); }
+    body.light .dk-search {
+      background: rgba(25,118,210,0.03); border-color: rgba(25,118,210,0.1); color: #333;
+    }
+    body.light .dk-search:focus {
+      border-color: #1976d2; box-shadow: 0 0 6px rgba(25,118,210,0.1);
+    }
+    body.light .dk-search::placeholder { color: #999; }
+    body.light .dk-btn {
+      background: rgba(25,118,210,0.04); border-color: rgba(25,118,210,0.1); color: #666;
+    }
+    body.light .dk-btn:hover { background: rgba(25,118,210,0.1); color: #333; }
+    body.light .dk-btn:disabled:hover { background: rgba(25,118,210,0.04); color: #666; }
+    body.light .dk-btn-danger:not(:disabled) { color: #d32f2f; border-color: rgba(211,47,47,0.3); background: rgba(211,47,47,0.06); }
+    body.light .dk-btn-danger:not(:disabled):hover { background: rgba(211,47,47,0.15); color: #e53935; }
+    body.light .dk-loading-text { color: #1976d2; }
+    body.light .dk-table th {
+      color: #888; background: #f5f6f8;
+      border-bottom-color: rgba(25,118,210,0.08);
+    }
+    body.light .dk-table td { border-bottom-color: rgba(25,118,210,0.03); }
+    body.light .dk-row:hover { background: rgba(25,118,210,0.03); }
+    body.light .dk-status-msg { color: #999; }
+    body.light .dk-error { color: #d32f2f; }
+    body.light .dk-name { color: #333; }
+    body.light .dk-tag { color: #1565c0; background: rgba(25,118,210,0.06); }
+    body.light .dk-ports { color: #888; }
+    body.light .dk-created { color: #888; }
+    body.light .dk-meta { color: #999; }
+    body.light .dk-icon-btn {
+      background: rgba(25,118,210,0.04); border-color: rgba(25,118,210,0.08);
+    }
+    body.light .dk-icon-btn img { filter: brightness(0) saturate(100%) invert(47%) sepia(4%) saturate(18%) hue-rotate(0deg) brightness(92%) contrast(84%); }
+    body.light .dk-icon-btn:hover { background: rgba(25,118,210,0.12); border-color: rgba(25,118,210,0.2); }
+    body.light .dk-icon-btn:hover img { filter: brightness(0) saturate(100%) invert(20%); }
+    body.light .dk-icon-start:hover { background: rgba(46,125,50,0.08); border-color: rgba(46,125,50,0.3); }
+    body.light .dk-icon-start:hover img { filter: brightness(0) saturate(100%) invert(35%) sepia(61%) saturate(557%) hue-rotate(74deg) brightness(95%) contrast(88%); }
+    body.light .dk-icon-stop:hover { background: rgba(198,40,40,0.08); border-color: rgba(198,40,40,0.3); }
+    body.light .dk-icon-stop:hover img { filter: brightness(0) saturate(100%) invert(24%) sepia(78%) saturate(2094%) hue-rotate(340deg) brightness(92%) contrast(95%); }
+    body.light .dk-icon-restart:hover { background: rgba(230,81,0,0.08); border-color: rgba(230,81,0,0.3); }
+    body.light .dk-icon-restart:hover img { filter: brightness(0) saturate(100%) invert(37%) sepia(89%) saturate(1292%) hue-rotate(5deg) brightness(97%) contrast(101%); }
+    body.light .dk-icon-del:hover { background: rgba(198,40,40,0.08); border-color: rgba(198,40,40,0.3); }
+    body.light .dk-copy-btn { background: rgba(25,118,210,0.05); border-color: rgba(25,118,210,0.1); }
+    body.light .dk-copy-btn img { filter: brightness(0) saturate(100%) invert(47%) sepia(4%) saturate(18%) hue-rotate(0deg) brightness(92%) contrast(84%); }
+    body.light .dk-copy-btn:hover { background: rgba(25,118,210,0.15); }
+    body.light .dk-copy-btn:hover img { filter: brightness(0) saturate(100%) invert(20%); }
+    body.light .dk-icon-del:hover img { filter: brightness(0) saturate(100%) invert(24%) sepia(78%) saturate(2094%) hue-rotate(340deg) brightness(92%) contrast(95%); }
+    body.light .dk-modal-overlay { background: rgba(0,0,0,0.3); }
+    body.light .dk-modal-wrap {
+      background: #fff; border-color: rgba(25,118,210,0.12);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    }
+    body.light .dk-modal-header { color: #1565c0; border-bottom-color: rgba(25,118,210,0.1); }
+    body.light .dk-modal-body { color: #444; }
+
+    body.light .toast-error { background: #d32f2f; }
+    body.light .toast-success { background: #388e3c; }
+    body.light .toast-info { background: #1976d2; }
+
+    body.light .cm-wrap {
+      background: #fff; border-color: rgba(25,118,210,0.12);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    }
+    body.light .cm-overlay { background: rgba(0,0,0,0.3); }
+    body.light .cm-header { color: #1565c0; border-bottom-color: rgba(25,118,210,0.1); }
+    body.light .cm-body { color: #444; }
+    body.light .cm-footer { border-top-color: rgba(25,118,210,0.08); }
+    body.light .cm-btn {
+      background: rgba(25,118,210,0.06); border-color: rgba(25,118,210,0.1); color: #555;
+    }
+    body.light .cm-btn:hover { background: rgba(25,118,210,0.15); color: #333; }
+    body.light .cm-confirm-btn { background: #d32f2f; border-color: #d32f2f; color: #fff; }
+    body.light .cm-confirm-btn:hover { background: #e53935; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 登录表单（v-if 控制显隐） -->
+    <div v-if="!connected" class="login-box">
+      <div style="text-align:center;margin-bottom:24px">
+        <img src="favicon.svg" alt="xo Term" width="56" height="56" style="display:block;margin:0 auto 12px">
+        <h1>xo Term</h1>
+        <p class="subtitle">极简 Linux 运维终端 &middot; By Danfeng Xiang</p>
+      </div>
+      <div v-if="error" class="error">{{ error }}</div>
+      <label>用户名</label>
+      <input v-model="username" type="text" autocomplete="off" @keyup.enter="focusPwd">
+      <label>密码</label>
+      <input ref="pwdInput" v-model="password" type="password" @keyup.enter="login">
+      <label style="display:flex;align-items:center;justify-content:space-between">
+        <span>终端主题</span>
+        <span style="cursor:pointer;user-select:none;font-size:14px;color:#e0e0e0" @click="toggleTheme">
+          {{ themeMode === 'dark' ? '🌙 深色' : '☀️ 浅色' }}
+        </span>
+      </label>
+      <button @click="login" :disabled="loading">
+        {{ loading ? '连接中...' : '连接' }}
+      </button>
+    </div>
+
+    <!-- 主界面（v-else） -->
+    <div v-else class="app-shell">
+      <!-- 左侧导航栏 -->
+      <aside class="sidebar" :class="{ collapsed: sidebarCollapsed }">
+        <div class="sidebar-logo">
+          <img src="favicon.svg" alt="xo" width="24" height="24">
+          <span>xo</span>
+        </div>
+        <nav class="sidebar-nav">
+          <div class="nav-item" :class="{ active: activeNav === 'terminal' }" @click="switchNav('terminal')" title="终端">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 17 10 11 4 5"/>
+              <line x1="12" y1="19" x2="20" y2="19"/>
+            </svg>
+            <span>终端</span>
+          </div>
+          <div class="nav-item" :class="{ active: activeNav === 'files' }" @click="switchNav('files')" title="文件">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>文件</span>
+          </div>
+          <div class="nav-item" :class="{ active: activeNav === 'docker' }" @click="switchNav('docker')" title="Docker">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="1" y="3" width="15" height="13" rx="2"/>
+              <polyline points="23 7 16 7 16 21"/>
+              <line x1="8" y1="7" x2="8" y2="21"/>
+            </svg>
+            <span>Docker</span>
+          </div>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="sidebar-status">
+            <span class="dot" :class="{ disconnected: !wsAlive }"></span>
+            <span>{{ wsAlive ? '已连接' : '已断开' }}</span>
+          </div>
+          <div class="sf-btns">
+            <button class="sf-btn sf-btn-about" @click="showAbout = !showAbout" title="交个朋友？批评建议都欢迎~"><img src="icon-about.svg" width="16" height="16"></button>
+            <button class="sf-btn" @click="toggleSidebar" :title="sidebarCollapsed ? '展开导航栏' : '折叠导航栏'"><img src="icon-collapse.svg" width="16" height="16" :style="{ transform: sidebarCollapsed ? 'scaleX(-1)' : '' }"></button>
+          </div>
+        </div>
+        <!-- 关于弹窗（屏幕居中 16:9） -->
+        <div v-if="showAbout" class="about-overlay" @click.self="showAbout = false" @keydown.escape="showAbout = false">
+          <div class="about-modal">
+            <button class="about-close" @click="showAbout = false">✕</button>
+            <div class="about-left">
+              <h2>嘿，我是 Danny 👋</h2>
+              <p class="about-role">xo Term 作者 · 全栈开发者</p>
+              <p class="about-desc">一杯咖啡，一行代码。xo 是一个极简 Linux 运维终端，把终端、文件管理、Docker 管理融为一体，让日常运维更顺手。</p>
+              <div class="about-tags">
+                <span class="about-tag">Web 终端</span>
+                <span class="about-tag">文件管理</span>
+                <span class="about-tag">Docker</span>
+                <span class="about-tag">深色/浅色主题</span>
+              </div>
+              <p class="about-footer-text">有任何想法、建议或吐槽，欢迎随时联系！</p>
+            </div>
+            <div class="about-right">
+              <img src="about-me.jpg" alt="微信二维码">
+              <p class="about-qr-label">微信扫码交个朋友</p>
+              <p class="about-email">4198166@qq.com</p>
+              <p class="about-motto">你的反馈是我熬夜改 bug 的动力 😄</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 右侧内容区 -->
+      <main class="content-area">
+        <!-- 终端 -->
+        <div v-show="activeNav === 'terminal'" id="terminal-container"></div>
+
+        <!-- 文件视图 -->
+        <div v-show="activeNav === 'files'" class="files-view">
+          <template v-if="!editorVisible">
+            <div class="fv-header">
+              <button class="fv-btn" @click="goUp" title="上级目录">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="18 15 12 9 6 15"/>
+                </svg>
+              </button>
+              <button class="fv-btn" @click="listFiles(filePanelPath)" title="刷新">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              </button>
+              <label class="fv-btn fv-upload-btn" title="上传文件">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <input type="file" style="display:none" @change="uploadFile">
+              </label>
+              <input class="fv-path" v-model="filePanelPath" @keyup.enter="listFiles(filePanelPath)">
+            </div>
+            <div v-if="uploadProgress" class="fv-progress">
+              <div class="fv-progress-bar">
+                <div class="fv-progress-fill" :style="{width: uploadProgress.percent+'%'}"></div>
+              </div>
+              <span class="fv-progress-text">{{ uploadProgress.name }} &nbsp; {{ uploadProgress.percent }}% &nbsp; {{ formatSize(uploadProgress.speed) }}/s</span>
+            </div>
+            <div class="fv-list">
+              <div v-if="filePanelLoading" class="fv-item fv-loading">加载中...</div>
+              <template v-else>
+                <div v-for="f in files" :key="f.name" class="fv-item"
+                     :class="{ 'fv-dir': f.type==='dir' }"
+                     @click="f.type==='dir' ? enterDir(f.name) : null">
+                  <div class="fv-item-left">
+                    <span class="fv-icon">{{ f.type === 'dir' ? 'D' : 'F' }}</span>
+                    <span class="fv-name">{{ f.name }}</span>
+                    <span v-if="f.type==='file'" class="fv-actions">
+                      <button class="fv-action-btn" @click.stop="downloadFile(f.name)" title="下载"><img src="icon-download.svg" width="12" height="12"></button>
+                      <button class="fv-action-btn" :class="{ disabled: !f.openable }" @click.stop="openFile(f.name)" title="打开"><img src="icon-inspect.svg" width="12" height="12"></button>
+                    </span>
+                  </div>
+                  <div class="fv-item-right">
+                    <span class="fv-size">{{ f.type === 'dir' ? '' : formatSize(f.size) }}</span>
+                  </div>
+                </div>
+                <div v-if="!filePanelLoading && files.length===0" class="fv-item fv-empty">空目录</div>
+              </template>
+            </div>
+          </template>
+          <!-- 编辑器 Modal -->
+          <div v-if="editorVisible" class="fe-modal-overlay" @click.self="closeEditor" @keydown.escape="closeEditor" tabindex="-1">
+            <div class="fe-modal-wrap">
+              <div class="fei-header">
+                <span class="fei-name">{{ editingFilePath }}</span>
+                <button class="fv-btn" @click="saveFile" title="保存"><img src="icon-download.svg" width="14" height="14" style="filter:brightness(0) saturate(100%) invert(65%) sepia(9%) saturate(344%) hue-rotate(157deg) brightness(92%) contrast(84%)"></button>
+                <button class="fv-btn" @click="closeEditor" title="关闭" style="color:#ef5350">✕</button>
+              </div>
+              <div class="fei-body">
+                <div class="fei-gutter">
+                  <span v-for="n in editorLineCount" :key="n">{{ n }}</span>
+                </div>
+                <textarea class="fei-textarea" v-model="editorContent" @scroll="onEditorScroll" spellcheck="false"></textarea>
+                <button class="fei-float-btn fei-float-top" @click="scrollEditorToTop" title="回到顶部"><img src="go-top.svg" width="14" height="14"></button>
+                <button class="fei-float-btn fei-float-bottom" @click="scrollEditorToBottom" title="滚动到底部"><img src="go-bottom.svg" width="14" height="14"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Docker 管理 -->
+        <div v-show="activeNav === 'docker'" class="docker-view">
+          <!-- 子 Tab -->
+          <div class="dk-tabs">
+            <div class="dk-tab" :class="{ active: dockerTab==='containers' }" @click="dkSwitchTab('containers')">容器</div>
+            <div class="dk-tab" :class="{ active: dockerTab==='images' }" @click="dkSwitchTab('images')">镜像</div>
+          </div>
+
+          <!-- 工具栏 -->
+          <div class="dk-toolbar">
+            <button class="dk-btn" @click="dkRefresh">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+            </button>
+            <input class="dk-search" v-model="dkSearch" :placeholder="dkSearchPlaceholder" @input="dkOnSearch">
+            <button v-if="dkShowBulkDelete" class="dk-btn dk-btn-danger" :disabled="dkSelected.length===0" @click="dkBulkDelete">删除选中 ({{ dkSelected.length }})</button>
+            <span v-if="dkLoading" class="dk-loading-text">加载中...</span>
+          </div>
+
+          <!-- 列表区 -->
+          <div class="dk-list">
+            <div v-if="dkLoading" class="dk-status-msg">加载中...</div>
+            <div v-else-if="dkError" class="dk-status-msg dk-error">{{ dkError }}</div>
+            <template v-else>
+              <!-- ===== 容器表格 ===== -->
+              <table v-if="dockerTab==='containers'" class="dk-table">
+                <thead>
+                  <tr>
+                    <th class="dk-th-status">状态</th>
+                    <th class="dk-th-name">名称</th>
+                    <th class="dk-th-image">镜像</th>
+                    <th class="dk-th-ports">端口</th>
+                    <th class="dk-th-created">STATUS</th>
+                    <th class="dk-th-actions">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="dkFiltered.length===0">
+                    <td colspan="6" class="dk-status-msg">无容器</td>
+                  </tr>
+                  <tr v-for="c in dkFiltered" :key="c.id" class="dk-row">
+                    <td class="dk-td-status"><span class="dk-status-dot" :class="dkStateClass(c.state)"></span></td>
+                    <td class="dk-name" :title="c.id">{{ c.name }}<button class="dk-copy-btn" @click.stop="copyCellText($event)" title="复制"><img src="icon-copy.svg" width="10" height="10"></button></td>
+                    <td class="dk-name" :title="c.image">{{ c.image }}<button class="dk-copy-btn" @click.stop="copyCellText($event)" title="复制"><img src="icon-copy.svg" width="10" height="10"></button></td>
+                    <td class="dk-ports" :title="c.ports">{{ c.ports || '—' }}</td>
+                    <td class="dk-created" :title="c.status">{{ c.status }}</td>
+                    <td class="dk-actions">
+                      <button v-if="c.state==='running'" class="dk-icon-btn dk-icon-stop" @click="dkContainerOp(c.id,'stop')" title="停止"><img src="icon-stop.svg" width="14" height="14"></button>
+                      <button v-if="c.state!=='running'" class="dk-icon-btn dk-icon-start" @click="dkContainerOp(c.id,'start')" title="启动"><img src="icon-start.svg" width="14" height="14"></button>
+                      <button class="dk-icon-btn dk-icon-restart" @click="dkContainerOp(c.id,'restart')" title="重启"><img src="icon-restart.svg" width="14" height="14"></button>
+                      <button class="dk-icon-btn" @click="dkContainerLogs(c.id,c.name)" title="日志"><img src="icon-logs.svg" width="14" height="14"></button>
+                      <button class="dk-icon-btn" @click="dkContainerInspect(c.id,c.name)" title="Inspect"><img src="icon-inspect.svg" width="14" height="14"></button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- ===== 镜像表格 ===== -->
+              <table v-if="dockerTab==='images'" class="dk-table dk-table-images">
+                <thead>
+                  <tr>
+                    <th class="dk-th-check"><input type="checkbox" class="dk-check" @change="dkToggleAll" :checked="dkAllSelected"></th>
+                    <th class="dk-th-name">标签</th>
+                    <th class="dk-th-id">ID</th>
+                    <th class="dk-th-size">大小</th>
+                    <th class="dk-th-actions">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="dkFiltered.length===0">
+                    <td colspan="5" class="dk-status-msg">无镜像</td>
+                  </tr>
+                  <tr v-for="img in dkFiltered" :key="img.id+img.full_tag" class="dk-row">
+                    <td class="dk-td-check"><input type="checkbox" :value="img.id" v-model="dkSelected" class="dk-check"></td>
+                    <td class="dk-name" :title="img.full_tag">{{ img.full_tag }}<button class="dk-copy-btn" @click.stop="copyCellText($event)" title="复制"><img src="icon-copy.svg" width="10" height="10"></button></td>
+                    <td class="dk-meta">{{ img.id }}</td>
+                    <td class="dk-meta">{{ dkFormatSize(img.size) }}</td>
+                    <td class="dk-actions">
+                      <button class="dk-icon-btn" @click="dkImageInspect(img.id, img.full_tag)" title="Inspect"><img src="icon-inspect.svg" width="14" height="14"></button>
+                      <button class="dk-icon-btn dk-icon-del" @click="dkDeleteImage(img.id)" title="删除"><img src="icon-delete.svg" width="14" height="14"></button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </template>
+          </div>
+
+          <!-- 弹窗（日志 / Inspect） -->
+          <div v-if="dkModal.visible" class="dk-modal-overlay" @click.self="dkModalClose" @keydown.escape="dkModalClose" tabindex="-1" ref="dkModalOverlay">
+            <div class="dk-modal-wrap">
+              <div class="dk-modal-header">
+                <span>{{ dkModal.title }}</span>
+                <button class="fv-btn" @click="dkModalClose" style="color:#ef5350">✕</button>
+              </div>
+              <pre class="dk-modal-body">{{ dkModal.content }}</pre>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Toast 通知容器 -->
+    <div class="toast-container">
+      <div v-for="t in toasts" :key="t.id" class="toast-item" :class="'toast-' + t.type">{{ t.msg }}</div>
+    </div>
+
+    <!-- 通用确认弹窗 -->
+    <div v-if="confirmModal.visible" class="cm-overlay" @click.self="confirmCancel" @keydown.escape="confirmCancel" tabindex="-1">
+      <div class="cm-wrap">
+        <div class="cm-header">{{ confirmModal.title }}</div>
+        <div class="cm-body">{{ confirmModal.message }}</div>
+        <div class="cm-footer">
+          <button class="cm-btn" @click="confirmCancel">取消</button>
+          <button class="cm-btn cm-confirm-btn" @click="confirmOk">确认</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "vue": "./vue.esm-browser.prod.js",
+      "@xterm/xterm": "./xterm.js",
+      "@xterm/addon-fit": "./xterm-addon-fit.js"
+    }
+  }
+  </script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
